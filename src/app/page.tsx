@@ -710,7 +710,7 @@ export default function Home() {
                   <pre className="p-5 text-sm text-green-400 overflow-x-auto custom-scrollbar">
 {`// ⚠️ IMPORTANTE: Cuando subas el backend a producción (ej. Vercel, Render, AWS),
 // cambia esta URL por tu dominio real.
-const API_URL = 'http://localhost:3001/api/alimentos'; 
+const API_URL = 'https://smae-nutri-romi-api.vercel.app/api/alimentos'; 
 // const API_URL = 'https://api.tu-proyecto-nutricion.com/api/alimentos';
 
 fetch(\`\${API_URL}?q=manzana&limit=5\`)
@@ -740,7 +740,7 @@ fetch(\`\${API_URL}?q=manzana&limit=5\`)
 
 // ⚠️ IMPORTANTE: Es mejor usar Variables de Entorno (.env) para esto.
 // En Next.js puedes usar process.env.NEXT_PUBLIC_API_URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smae-nutri-romi-api.vercel.app';
 
 export default function NutriSearch() {
   const [data, setData] = useState([]);
@@ -784,7 +784,7 @@ export default function NutriSearch() {
 import os
 
 # ⚠️ IMPORTANTE: Usa tu dominio real de producción aquí.
-API_URL = os.environ.get("SMAE_API_URL", "http://localhost:3001/api/alimentos")
+API_URL = os.environ.get("SMAE_API_URL", "https://smae-nutri-romi-api.vercel.app/api/alimentos")
 # API_URL = "https://api.tu-proyecto-nutricion.com/api/alimentos"
 
 params = {
