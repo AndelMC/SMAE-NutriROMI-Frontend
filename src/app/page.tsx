@@ -141,7 +141,7 @@ export default function Home() {
     const fetchCalcData = async () => {
       setIsCalcSearching(true);
       try {
-        const response = await fetch(`http://localhost:3001/api/alimentos?q=${calcDebouncedSearch}&limit=10`);
+        const response = await fetch(`https://smae-nutri-romi-api.vercel.app/api/alimentos?q=${calcDebouncedSearch}&limit=10`);
         if (response.ok) {
           const result = await response.json();
           setCalcSearchResults(result.data || []);
@@ -252,7 +252,7 @@ export default function Home() {
         queryParams.append('page', page.toString());
         queryParams.append('limit', limit.toString());
         
-        const response = await fetch(`http://localhost:3001/api/alimentos?${queryParams.toString()}`);
+        const response = await fetch(`https://smae-nutri-romi-api.vercel.app/api/alimentos?${queryParams.toString()}`);
         if (response.ok) {
           const result = await response.json();
           setData(result.data || []);
