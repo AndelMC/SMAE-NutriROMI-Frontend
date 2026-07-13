@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Activity, Stethoscope, ChevronRight, Loader2, ChevronDown, Check, Leaf, Apple, Wheat, Bean, Beef, Milk, Droplet, Candy, Coffee, Wine, ListFilter, Calculator, Plus, Minus, Trash2, ShoppingCart, X, Beaker, Pill, Code } from 'lucide-react';
+import { Search, Activity, Stethoscope, ChevronRight, Loader2, ChevronDown, Check, Leaf, Apple, Wheat, Bean, Beef, Milk, Droplet, Candy, Coffee, Wine, ListFilter, Calculator, Plus, Minus, Trash2, ShoppingCart, X, Beaker, Pill, Code, Info } from 'lucide-react';
 import Image from 'next/image';
 import SideDrawer from '@/components/SideDrawer';
 import logo from './logo.png';
@@ -110,9 +110,10 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Estado del Drawer
+  // Estado del Drawer y Tabs
   const [selectedItem, setSelectedItem] = useState<Alimento | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showInfo, setShowInfo] = useState(true);
 
   // Calculadora
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -330,22 +331,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tabs de Navegación Principales */}
-        <div className="flex gap-4 mb-8 border-b border-slate-200">
-          <button 
-            onClick={() => { setActiveTab('alimentos'); setPage(1); setSearch(''); setGrupo(''); }}
-            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'alimentos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-            Alimentos Equivalentes
-          </button>
-          <button 
-            onClick={() => { setActiveTab('platillos'); setPage(1); setSearch(''); setGrupo(''); }}
-            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'platillos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-            Platillos (Recetas)
-          </button>
-        </div>
-
         {/* Sección de la Calculadora (Independiente) */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 transition-all">
           <div className="flex flex-col lg:flex-row gap-8 items-start justify-between">
@@ -526,6 +511,57 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Tabs de Navegación Principales */}
+        <div className="flex items-center justify-between mb-4 border-b border-slate-200">
+          <div className="flex gap-4">
+            <button 
+              onClick={() => { setActiveTab('alimentos'); setPage(1); setSearch(''); setGrupo(''); }}
+              className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'alimentos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              Alimentos Equivalentes
+            </button>
+            <button 
+              onClick={() => { setActiveTab('platillos'); setPage(1); setSearch(''); setGrupo(''); }}
+              className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'platillos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            >
+              Platillos (Recetas)
+            </button>
+          </div>
+          <button 
+            onClick={() => setShowInfo(!showInfo)}
+            className="pb-3 px-2 text-slate-400 hover:text-blue-500 transition-colors"
+            title="¿Cómo funciona esto?"
+          >
+            <Info className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Caja de Información */}
+        {showInfo && (
+          <div className="bg-blue-50/80 border border-blue-100 rounded-xl p-4 mb-6 text-sm text-blue-800 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 relative">
+            <button 
+              onClick={() => setShowInfo(false)} 
+              className="absolute top-4 right-4 text-blue-400 hover:text-blue-700 transition-colors"
+              title="Cerrar información"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h4 className="font-bold flex items-center gap-2 mb-2">
+              <Info className="w-4 h-4 text-blue-600"/> 
+              {activeTab === 'alimentos' ? 'Catálogo de Alimentos Equivalentes' : 'Catálogo de Platillos y Recetas'}
+            </h4>
+            {activeTab === 'alimentos' ? (
+              <p className="opacity-90 leading-relaxed pr-6">
+                Aquí encuentras ingredientes crudos o básicos. Están clasificados en los <strong>10 grupos oficiales del SMAE</strong> (ej. Frutas, Cereales, Leguminosas). Usa el filtro de grupo para encontrar opciones específicas para tus equivalencias.
+              </p>
+            ) : (
+              <p className="opacity-90 leading-relaxed pr-6">
+                Aquí encuentras preparaciones compuestas por múltiples ingredientes. Para facilitar tu búsqueda, el filtro ahora funciona por <strong>"Tipo de Platillo"</strong> (ej. Postre, Plato Fuerte, Bebida) en lugar de grupos nutricionales básicos.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Panel de Control */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
