@@ -143,11 +143,21 @@ export default function Home() {
     const fetchCalcData = async () => {
       setIsCalcSearching(true);
       try {
-        const response = await fetch(`https://smae-nutri-romi-api.vercel.app/api/alimentos?q=${calcDebouncedSearch}&limit=10`);
-        if (response.ok) {
-          const result = await response.json();
-          setCalcSearchResults(result.data || []);
+        const [resAlimentos, resPlatillos] = await Promise.all([
+          fetch(`https://smae-nutri-romi-api.vercel.app/api/alimentos?q=${calcDebouncedSearch}&limit=5`),
+          fetch(`https://smae-nutri-romi-api.vercel.app/api/platillos?q=${calcDebouncedSearch}&limit=5`)
+        ]);
+        
+        let combined: Alimento[] = [];
+        if (resAlimentos.ok) {
+          const result = await resAlimentos.json();
+          combined = [...combined, ...(result.data || [])];
         }
+        if (resPlatillos.ok) {
+          const result = await resPlatillos.json();
+          combined = [...combined, ...(result.data || [])];
+        }
+        setCalcSearchResults(combined.slice(0, 10));
       } catch (e) {
         console.error(e);
       } finally {
@@ -157,11 +167,14 @@ export default function Home() {
     fetchCalcData();
   }, [calcDebouncedSearch]);
 
+  const getItemName = (item: Alimento) => item.Alimento || item.Platillo || 'Desconocido';
+
   const addToCalculator = (alimento: Alimento) => {
     setCartItems(prev => {
-      const existing = prev.find(p => p.item.Alimento === alimento.Alimento);
+      const name = getItemName(alimento);
+      const existing = prev.find(p => getItemName(p.item) === name);
       if (existing) {
-        return prev.map(p => p.item.Alimento === alimento.Alimento ? { ...p, quantity: p.quantity + 1 } : p);
+        return prev.map(p => getItemName(p.item) === name ? { ...p, quantity: p.quantity + 1 } : p);
       }
       return [...prev, { item: alimento, quantity: 1 }];
     });
@@ -169,7 +182,7 @@ export default function Home() {
 
   const updateQuantity = (alimentoName: string, delta: number) => {
     setCartItems(prev => prev.map(p => {
-      if (p.item.Alimento === alimentoName) {
+      if (getItemName(p.item) === alimentoName) {
         const newQ = p.quantity + delta;
         return newQ > 0 ? { ...p, quantity: newQ } : p;
       }
@@ -179,7 +192,7 @@ export default function Home() {
 
   const setExactQuantity = (alimentoName: string, exactQty: number) => {
     setCartItems(prev => prev.map(p => {
-      if (p.item.Alimento === alimentoName) {
+      if (getItemName(p.item) === alimentoName) {
         return exactQty >= 0 ? { ...p, quantity: exactQty } : p;
       }
       return p;
@@ -187,7 +200,7 @@ export default function Home() {
   };
 
   const removeFromCalculator = (alimentoName: string) => {
-    setCartItems(prev => prev.filter(p => p.item.Alimento !== alimentoName));
+    setCartItems(prev => prev.filter(p => getItemName(p.item) !== alimentoName));
   };
 
   const parseNum = (val: string | undefined | null) => {
@@ -197,28 +210,34 @@ export default function Home() {
   };
 
   const totals = cartItems.reduce((acc, curr) => {
-    acc.energia += parseNum(curr.item['Energía (kcal)']) * curr.quantity;
-    acc.proteina += parseNum(curr.item['Proteína (g)']) * curr.quantity;
-    acc.lipidos += parseNum(curr.item['Lípidos (g)']) * curr.quantity;
-    acc.carbs += parseNum(curr.item['Hidratos de carbono (g)']) * curr.quantity;
+    const item = curr.item;
+    const qty = curr.quantity;
+    const isPlatillo = !!item.Platillo;
+
+    acc.energia += (parseNum(item['Energía (kcal)']) || parseNum(item.Energia_kcal)) * qty;
+    acc.proteina += (parseNum(item['Proteína (g)']) || parseNum(item.Proteina_g)) * qty;
+    acc.lipidos += (parseNum(item['Lípidos (g)']) || parseNum(item.Lipidos_g)) * qty;
+    acc.carbs += (parseNum(item['Hidratos de carbono (g)']) || parseNum(item.H_de_C_g)) * qty;
     
     // Micronutrientes
-    acc.sodio += parseNum(curr.item['Sodio (mg)']) * curr.quantity;
-    acc.potasio += parseNum(curr.item['Potasio (mg)']) * curr.quantity;
-    acc.calcio += parseNum(curr.item['Calcio (mg)']) * curr.quantity;
-    acc.fosforo += parseNum(curr.item['Fósforo (mg)']) * curr.quantity;
-    acc.hierro += parseNum(curr.item['Hierro (mg)']) * curr.quantity;
-    
-    // Vitaminas
-    acc.vitA += parseNum(curr.item['Vitamina A (µg RE)']) * curr.quantity;
-    acc.vitC += parseNum(curr.item['Acido Ascórbico (mg)']) * curr.quantity;
-    acc.acFolico += parseNum(curr.item['Acido Fólico (mg)']) * curr.quantity;
-    
-    // Otros
-    acc.pesoBruto += parseNum(curr.item['Peso bruto redondeado (g)']) * curr.quantity;
-    acc.fibra += parseNum(curr.item['Fibra (g)']) * curr.quantity;
-    acc.azucar += parseNum(curr.item['Azúcar (g)']) * curr.quantity;
-    acc.colesterol += parseNum(curr.item['Colesterol (mg)']) * curr.quantity;
+    if (!isPlatillo) {
+      acc.sodio += parseNum(item['Sodio (mg)']) * qty;
+      acc.potasio += parseNum(item['Potasio (mg)']) * qty;
+      acc.calcio += parseNum(item['Calcio (mg)']) * qty;
+      acc.fosforo += parseNum(item['Fósforo (mg)']) * qty;
+      acc.hierro += parseNum(item['Hierro (mg)']) * qty;
+      
+      // Vitaminas
+      acc.vitA += parseNum(item['Vitamina A (µg RE)']) * qty;
+      acc.vitC += parseNum(item['Acido Ascórbico (mg)']) * qty;
+      acc.acFolico += parseNum(item['Acido Fólico (mg)']) * qty;
+      
+      // Otros
+      acc.pesoBruto += parseNum(item['Peso bruto redondeado (g)']) * qty;
+      acc.fibra += parseNum(item['Fibra (g)']) * qty;
+      acc.azucar += parseNum(item['Azúcar (g)']) * qty;
+      acc.colesterol += parseNum(item['Colesterol (mg)']) * qty;
+    }
 
     return acc;
   }, { 
@@ -286,8 +305,39 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Header Original Centrado */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center justify-center relative">
+      <div className="pt-4 px-4 sm:px-6 lg:px-8">
+        <header className="bg-sky-100 rounded-3xl border border-sky-200 relative overflow-hidden shadow-sm">
+        
+        {/* Estilos de Animación */}
+        <style>{`
+          @keyframes float-up-down {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(15deg); }
+          }
+          .anim-float-1 { animation: float-up-down 3s ease-in-out infinite; }
+          .anim-float-2 { animation: float-up-down 4s ease-in-out infinite 0.7s; }
+          .anim-float-3 { animation: float-up-down 3.5s ease-in-out infinite 1.2s; }
+          .anim-float-4 { animation: float-up-down 4.2s ease-in-out infinite 1.8s; }
+          .anim-float-5 { animation: float-up-down 3.8s ease-in-out infinite 2.5s; }
+          .anim-float-6 { animation: float-up-down 3.3s ease-in-out infinite 0.3s; }
+          .anim-float-7 { animation: float-up-down 4.5s ease-in-out infinite 1.5s; }
+        `}</style>
+        
+        {/* Fondo Animado de Iconos (Olas / Montaña) */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 flex justify-around items-center px-2 md:px-8">
+          <Apple className="w-10 h-10 text-red-500 anim-float-1 mt-6" />
+          <Leaf className="w-8 h-8 text-green-500 anim-float-2 mb-12 hidden sm:block" />
+          <Wheat className="w-12 h-12 text-amber-500 anim-float-3 mt-14" />
+          <Milk className="w-9 h-9 text-blue-400 anim-float-4 mb-16 hidden md:block" />
+          <Beef className="w-10 h-10 text-rose-700 anim-float-5 mt-4" />
+          <Bean className="w-8 h-8 text-yellow-700 anim-float-6 mb-10" />
+          <Droplet className="w-7 h-7 text-cyan-400 anim-float-7 mt-16 hidden sm:block" />
+          <Coffee className="w-9 h-9 text-stone-600 anim-float-1 mb-8" />
+          <Candy className="w-10 h-10 text-pink-500 anim-float-2 mt-10 hidden md:block" />
+          <Wine className="w-11 h-11 text-purple-600 anim-float-3 mb-14" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center justify-center relative z-10">
           
           <div className="flex flex-col items-center justify-center gap-3">
             <div className="relative h-16 w-16 rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex-shrink-0 bg-white">
@@ -295,6 +345,7 @@ export default function Home() {
                 src={logo}
                 alt="SMAE-NutriROMI Logo"
                 fill
+                sizes="64px"
                 style={{ objectFit: 'contain', padding: '6px' }}
                 priority
               />
@@ -311,6 +362,7 @@ export default function Home() {
           
         </div>
       </header>
+      </div>
 
       {/* Contenido Principal */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -367,19 +419,32 @@ export default function Home() {
                      ) : calcSearchResults.length === 0 ? (
                        <div className="p-4 text-center text-sm text-slate-500">No se encontraron resultados</div>
                      ) : (
-                       calcSearchResults.map(item => (
-                         <button 
-                           key={item.Alimento}
-                           onClick={() => { addToCalculator(item); setCalcSearch(''); }}
-                           className="w-full text-left px-4 py-3 hover:bg-blue-50/50 border-b border-slate-100 last:border-0 transition-colors group"
-                         >
-                           <div className="flex justify-between items-center">
-                             <div className="font-medium text-sm text-slate-800 group-hover:text-blue-700">{item.Alimento}</div>
-                             <Plus className="h-4 w-4 text-slate-300 group-hover:text-blue-600" />
-                           </div>
-                           <div className="text-xs text-slate-500 mt-0.5">{item['Cant.']} {item.Unidad} • {item.Grupo}</div>
-                         </button>
-                       ))
+                       calcSearchResults.map(item => {
+                          const isPlat = !!item.Platillo;
+                          const name = isPlat ? item.Platillo : item.Alimento;
+                          return (
+                            <button 
+                              key={name}
+                              onClick={() => { addToCalculator(item); setCalcSearch(''); }}
+                              className="w-full text-left px-4 py-3 hover:bg-blue-50/50 border-b border-slate-100 last:border-0 transition-colors group"
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="font-medium text-sm text-slate-800 group-hover:text-blue-700 flex items-center gap-2">
+                                  {name}
+                                  {isPlat ? (
+                                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Receta</span>
+                                  ) : (
+                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Alimento</span>
+                                  )}
+                                </div>
+                                <Plus className="h-4 w-4 text-slate-300 group-hover:text-blue-600" />
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {isPlat ? '1 porción' : `${item['Cant.']} ${item.Unidad}`} • {isPlat ? item.Clasificacion_Busqueda : item.Grupo}
+                              </div>
+                            </button>
+                          );
+                        })
                      )}
                    </div>
                  )}
@@ -393,17 +458,26 @@ export default function Home() {
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                   {cartItems.map(c => {
-                    const baseAmount = parseNum(c.item['Cant.']) || 1;
+                    const isPlat = !!c.item.Platillo;
+                    const name = isPlat ? c.item.Platillo : c.item.Alimento;
+                    const baseAmount = isPlat ? 1 : (parseNum(c.item['Cant.']) || 1);
                     const currentAmount = c.quantity * baseAmount;
 
                     return (
-                      <div key={c.item.Alimento} className="flex flex-col bg-white shadow-sm p-3 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+                      <div key={name} className="flex flex-col bg-white shadow-sm p-3 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1 pr-2">
-                            <div className="text-sm font-semibold text-slate-800 leading-tight">{c.item.Alimento}</div>
-                            <div className="text-xs text-slate-400 mt-0.5">Porción base: {c.item['Cant.']} {c.item.Unidad}</div>
+                            <div className="text-sm font-semibold text-slate-800 leading-tight flex items-center gap-2">
+                              {name}
+                              {isPlat ? (
+                                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Receta</span>
+                              ) : (
+                                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Alimento</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-0.5">Porción base: {isPlat ? '1 porción' : `${c.item['Cant.']} ${c.item.Unidad}`}</div>
                           </div>
-                          <button onClick={() => removeFromCalculator(c.item.Alimento)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors">
+                          <button onClick={() => removeFromCalculator(name)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
@@ -411,12 +485,12 @@ export default function Home() {
                         <div className="flex items-center justify-between gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
                           {/* Botones de Porciones */}
                           <div className="flex-1 flex items-stretch bg-white rounded-md border border-slate-200 h-10 overflow-hidden">
-                            <button onClick={() => updateQuantity(c.item.Alimento, -1)} className="px-3 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition-colors bg-slate-50/50"><Minus className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => updateQuantity(name, -1)} className="px-3 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition-colors bg-slate-50/50"><Minus className="h-3.5 w-3.5" /></button>
                             <div className="flex-1 text-xs font-bold text-center text-slate-700 flex flex-col justify-center items-center leading-none border-x border-slate-100">
                               <span>{Number(c.quantity.toFixed(2))}</span>
                               <span className="text-[9px] font-normal text-slate-400 mt-0.5">porc.</span>
                             </div>
-                            <button onClick={() => updateQuantity(c.item.Alimento, 1)} className="px-3 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition-colors bg-slate-50/50"><Plus className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => updateQuantity(name, 1)} className="px-3 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition-colors bg-slate-50/50"><Plus className="h-3.5 w-3.5" /></button>
                           </div>
 
                           <div className="text-slate-300 font-bold text-sm shrink-0">=</div>
@@ -430,14 +504,14 @@ export default function Home() {
                               onChange={(e) => {
                                 const val = parseFloat(e.target.value);
                                 if (!isNaN(val)) {
-                                  setExactQuantity(c.item.Alimento, val / baseAmount);
+                                  setExactQuantity(name, val / baseAmount);
                                 } else {
-                                  setExactQuantity(c.item.Alimento, 0);
+                                  setExactQuantity(name, 0);
                                 }
                               }}
                             />
-                            <span className="text-xs text-slate-500 font-medium bg-slate-50 flex items-center justify-center px-3 border-l border-slate-100 truncate min-w-[70px] max-w-[90px]" title={c.item.Unidad}>
-                              {c.item.Unidad}
+                            <span className="text-xs text-slate-500 font-medium bg-slate-50 flex items-center justify-center px-3 border-l border-slate-100 truncate min-w-[70px] max-w-[90px]" title={isPlat ? 'porciones' : c.item.Unidad}>
+                              {isPlat ? 'porciones' : c.item.Unidad}
                             </span>
                           </div>
                         </div>
@@ -726,8 +800,26 @@ export default function Home() {
             </h2>
             <p className="text-slate-300 max-w-4xl leading-relaxed mb-8 text-sm md:text-base">
               Nuestra base de datos clínica está expuesta mediante una API REST rápida y accesible. 
-              Puedes integrar la búsqueda, paginación y filtrado de los más de 2,900 alimentos en cualquier proyecto, aplicación móvil o sistema de terceros. Los parámetros soportados son <code>q</code> (búsqueda), <code>grupo</code>, <code>page</code> y <code>limit</code>. Aquí te mostramos cómo hacerlo en los lenguajes y frameworks más populares:
+              Puedes integrar la búsqueda, paginación y filtrado de nuestro catálogo en cualquier proyecto, aplicación móvil o sistema de terceros a través de dos endpoints principales: <strong><code>/api/alimentos</code></strong> (ingredientes crudos) y <strong><code>/api/platillos</code></strong> (recetas compuestas).
+              Los parámetros soportados en ambos son <code>q</code> (búsqueda), <code>grupo</code>, <code>page</code> y <code>limit</code>. Aquí te mostramos cómo consumirlos:
             </p>
+
+            {/* Aviso de Swagger */}
+            <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4 mb-8 flex flex-col sm:flex-row items-start gap-4">
+              <div className="bg-blue-500/20 p-2 rounded-lg">
+                <Code className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h4 className="text-blue-300 font-semibold mb-1">Documentación Interactiva (Swagger)</h4>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  ¿Prefieres probar la API directamente desde tu navegador? Usa nuestra interfaz Swagger para explorar y probar todos los endpoints sin escribir código.
+                  <br className="mb-2" />
+                  🌐 Visita la raíz: <a href="https://smae-nutri-romi-api.vercel.app/" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline font-mono ml-1">https://smae-nutri-romi-api.vercel.app/</a>
+                  <br />
+                  📚 Docs directas: <a href="https://smae-nutri-romi-api.vercel.app/api-docs/" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline font-mono ml-1">https://smae-nutri-romi-api.vercel.app/api-docs/</a>
+                </p>
+              </div>
+            </div>
 
             {/* Menú de Tabs */}
             <div className="flex flex-wrap gap-2 mb-6 border-b border-slate-700 pb-4">
@@ -770,10 +862,13 @@ export default function Home() {
                   <pre className="p-5 text-sm text-green-400 overflow-x-auto custom-scrollbar">
 {`// ⚠️ IMPORTANTE: Cuando subas el backend a producción (ej. Vercel, Render, AWS),
 // cambia esta URL por tu dominio real.
-const API_URL = 'https://smae-nutri-romi-api.vercel.app/api/alimentos'; 
-// const API_URL = 'https://api.tu-proyecto-nutricion.com/api/alimentos';
+const API_URL_ALIMENTOS = 'https://smae-nutri-romi-api.vercel.app/api/alimentos'; 
+const API_URL_PLATILLOS = 'https://smae-nutri-romi-api.vercel.app/api/platillos'; 
 
-fetch(\`\${API_URL}?q=manzana&limit=5\`)
+// Puedes usar cualquiera de los dos endpoints según lo que necesites
+const TARGET_API = API_URL_ALIMENTOS; // o API_URL_PLATILLOS
+
+fetch(\`\${TARGET_API}?q=manzana&limit=5\`)
   .then(response => response.json())
   .then(data => {
     console.log('Total encontrados:', data.total);
@@ -807,6 +902,7 @@ export default function NutriSearch() {
 
   useEffect(() => {
     const fetchSMAE = async () => {
+      // Usa /api/alimentos o /api/platillos según necesites
       const res = await fetch(\`\${API_URL}/api/alimentos?grupo=Frutas\`);
       const json = await res.json();
       setData(json.data);
@@ -844,8 +940,9 @@ export default function NutriSearch() {
 import os
 
 # ⚠️ IMPORTANTE: Usa tu dominio real de producción aquí.
-API_URL = os.environ.get("SMAE_API_URL", "https://smae-nutri-romi-api.vercel.app/api/alimentos")
-# API_URL = "https://api.tu-proyecto-nutricion.com/api/alimentos"
+BASE_URL = os.environ.get("SMAE_API_URL", "https://smae-nutri-romi-api.vercel.app")
+# Puedes elegir apuntar a alimentos o platillos
+API_URL = f"{BASE_URL}/api/alimentos" # o f"{BASE_URL}/api/platillos"
 
 params = {
     "q": "pollo",
