@@ -257,8 +257,8 @@ export default function Home() {
         queryParams.append('page', page.toString());
         queryParams.append('limit', limit.toString());
         
-        // Usamos localhost:3001 porque el backend local tiene el nuevo endpoint
-        const response = await fetch(`http://localhost:3001/api/${endpoint}?${queryParams.toString()}`);
+        // Usamos la API de producción en Vercel
+        const response = await fetch(`https://smae-nutri-romi-api.vercel.app/api/${endpoint}?${queryParams.toString()}`);
         if (response.ok) {
           const result = await response.json();
           setData(result.data || []);
