@@ -30,6 +30,19 @@ export default function SideDrawer({ isOpen, onClose, data, onAdd }: SideDrawerP
     return `${value} ${suffix}`.trim();
   };
 
+  const parseJSONField = (field: any) => {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field.replace(/'/g, '"'));
+      } catch (e) {
+        return [field];
+      }
+    }
+    return [];
+  };
+
   if (!isOpen) return null;
 
   const isPlatillo = data && !!data.Platillo;
@@ -110,48 +123,149 @@ export default function SideDrawer({ isOpen, onClose, data, onAdd }: SideDrawerP
               {/* Vistas específicas según el tipo (Alimento o Platillo) */}
               {isPlatillo ? (
                 <>
-                  {data.Tipo_Platillo && data.Tipo_Platillo.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {data.Tipo_Platillo.map((t: string, idx: number) => (
-                        <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold border border-blue-100">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {data.Ingredientes_Equivalentes && data.Ingredientes_Equivalentes.length > 0 && (
-                    <div className="bg-slate-50/80 p-5 rounded-xl border border-slate-100 shadow-sm mt-6">
-                      <h3 className="font-bold text-lg mb-4 text-slate-800">Ingredientes (Equivalencias)</h3>
-                      <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-sm text-left">
-                          <thead className="border-b border-gray-200">
-                            <tr>
-                              <th className="py-2 font-semibold text-slate-700 whitespace-nowrap">Ingrediente</th>
-                              <th className="py-2 font-semibold text-slate-700 whitespace-nowrap px-4">Cant.</th>
-                              <th className="py-2 font-semibold text-slate-700 whitespace-nowrap">Eq.</th>
-                              <th className="py-2 font-semibold text-slate-700 whitespace-nowrap px-4">Grupo</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.Ingredientes_Equivalentes.map((ing: any, idx: number) => (
-                              <tr key={idx} className="border-b border-gray-100 last:border-0">
-                                <td className="py-3 text-slate-800 font-medium">{ing.Alimento}</td>
-                                <td className="py-3 text-slate-600 px-4">{ing.Cant} {ing.Unidad}</td>
-                                <td className="py-3 text-slate-600">{ing.Equivalentes}</td>
-                                <td className="py-3 text-slate-600 px-4">
-                                  <div className="leading-tight">
-                                    {ing.Grupo}
-                                    <div className="text-xs text-slate-400">{ing.Subgrupo}</div>
-                                  </div>
-                                </td>
-                              </tr>
+                  {/* Clasificaciones */}
+                  {(() => {
+                      const clasificaciones = parseJSONField(data.Clasificaciones);
+                      if (clasificaciones.filter(Boolean).length === 0) return null;
+                      return (
+                        <div className="mt-4">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Clasificación del Platillo</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {clasificaciones.filter(Boolean).map((t: string, idx: number) => (
+                              <span key={idx} className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[11px] font-black tracking-widest uppercase border border-slate-200 shadow-sm">
+                                {t}
+                              </span>
                             ))}
-                          </tbody>
-                        </table>
+                          </div>
+                        </div>
+                      );
+                  })()}
+
+                  {/* Tipo de Platillo */}
+                  {(() => {
+                      const tipos = parseJSONField(data.Tipo_Platillo);
+                      if (tipos.filter(Boolean).length === 0) return null;
+                      return (
+                        <div className="mt-4">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Platillo</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {tipos.filter(Boolean).map((t: string, idx: number) => (
+                              <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[11px] font-black tracking-widest uppercase border border-blue-100 shadow-sm">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                  })()}
+
+                  {/* Aportaciones por Grupo (Equivalencias_Grupo) */}
+                  {(() => {
+                    const eqGrupos = parseJSONField(data.Equivalencias_Grupo);
+                    if (eqGrupos.length === 0) return null;
+                    return (
+                      <div className="bg-slate-50/80 p-5 rounded-xl border border-slate-100 shadow-sm mt-6">
+                        <h3 className="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
+                          <Leaf className="h-5 w-5 text-green-500" />
+                          Aportaciones por Grupo
+                        </h3>
+                        <div className="overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-sm text-left">
+                            <thead className="border-b border-gray-200">
+                              <tr>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap">Grupo</th>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap px-4">Subgrupo</th>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap text-right">Equivalentes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {eqGrupos.map((eq: any, idx: number) => (
+                                <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
+                                  <td className="py-3 text-slate-800 font-medium">{eq.Grupo}</td>
+                                  <td className="py-3 text-slate-600 px-4">{eq.Subgrupo || '-'}</td>
+                                  <td className="py-3 text-blue-600 font-bold text-right">{eq.Equivalentes}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
+
+                  {(() => {
+                    const ingsEquiv = parseJSONField(data.Ingredientes_Equivalentes);
+                    if (ingsEquiv.length === 0) return null;
+                    return (
+                      <div className="bg-slate-50/80 p-5 rounded-xl border border-slate-100 shadow-sm mt-6">
+                        <h3 className="font-bold text-lg mb-4 text-slate-800">Ingredientes (Equivalencias)</h3>
+                        <div className="overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-sm text-left">
+                            <thead className="border-b border-gray-200">
+                              <tr>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap">Ingrediente</th>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap px-4">Cant.</th>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap">Eq.</th>
+                                <th className="py-2 font-semibold text-slate-700 whitespace-nowrap px-4">Grupo</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ingsEquiv.map((ing: any, idx: number) => (
+                                <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
+                                  <td className="py-3 text-slate-800 font-medium">{ing.Alimento}</td>
+                                  <td className="py-3 text-slate-600 px-4">{ing.Cant} {ing.Unidad}</td>
+                                  <td className="py-3 text-slate-600 font-bold">{ing.Equivalentes}</td>
+                                  <td className="py-3 text-slate-600 px-4">
+                                    <div className="leading-tight">
+                                      {ing.Grupo}
+                                      <div className="text-xs text-slate-400">{ing.Subgrupo}</div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {(() => {
+                    const ingsAports = parseJSONField(data.Ingredientes_Aportaciones);
+                    if (ingsAports.length === 0) return null;
+                    return (
+                      <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm mt-6">
+                        <h3 className="font-bold text-lg mb-4 text-slate-800 flex items-center gap-2">
+                          <Flame className="h-5 w-5 text-green-500" />
+                          Aportaciones por Ingrediente
+                        </h3>
+                        <div className="overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-sm text-left">
+                            <thead className="border-b border-slate-200">
+                              <tr>
+                                <th className="py-2 font-semibold text-slate-500 uppercase tracking-wider text-xs whitespace-nowrap">Ingrediente</th>
+                                <th className="py-2 font-semibold text-orange-500 uppercase tracking-wider text-xs whitespace-nowrap px-4">Energía<br/><span className="text-[10px] text-slate-400 font-normal normal-case">kcal</span></th>
+                                <th className="py-2 font-semibold text-blue-500 uppercase tracking-wider text-xs whitespace-nowrap px-4">Proteína<br/><span className="text-[10px] text-slate-400 font-normal normal-case">g</span></th>
+                                <th className="py-2 font-semibold text-yellow-500 uppercase tracking-wider text-xs whitespace-nowrap px-4">Lípidos<br/><span className="text-[10px] text-slate-400 font-normal normal-case">g</span></th>
+                                <th className="py-2 font-semibold text-green-500 uppercase tracking-wider text-xs whitespace-nowrap px-4">H de C<br/><span className="text-[10px] text-slate-400 font-normal normal-case">g</span></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ingsAports.map((ing: any, idx: number) => (
+                                <tr key={idx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                  <td className="py-3 text-slate-800 font-medium">{ing.Alimento}</td>
+                                  <td className="py-3 text-orange-600 font-bold px-4">{formatValue(ing.Energia)}</td>
+                                  <td className="py-3 text-blue-600 font-bold px-4">{formatValue(ing.Proteina)}</td>
+                                  <td className="py-3 text-yellow-600 font-bold px-4">{formatValue(ing.Lipidos)}</td>
+                                  <td className="py-3 text-green-600 font-bold px-4">{formatValue(ing.H_de_C)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               ) : (
                 <>
