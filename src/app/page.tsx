@@ -95,6 +95,7 @@ function CustomGroupSelect({ value, onChange }: { value: string, onChange: (val:
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<'alimentos' | 'platillos'>('alimentos');
   const [data, setData] = useState<Alimento[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -247,12 +248,17 @@ export default function Home() {
       setLoading(true);
       try {
         const queryParams = new URLSearchParams();
+        const endpoint = activeTab === 'platillos' ? 'platillos' : 'alimentos';
         if (debouncedSearch) queryParams.append('q', debouncedSearch);
-        if (grupo) queryParams.append('grupo', grupo);
+        if (grupo) {
+          if (activeTab === 'platillos') queryParams.append('clasificacion', grupo);
+          else queryParams.append('grupo', grupo);
+        }
         queryParams.append('page', page.toString());
         queryParams.append('limit', limit.toString());
         
-        const response = await fetch(`https://smae-nutri-romi-api.vercel.app/api/alimentos?${queryParams.toString()}`);
+        // Usamos localhost:3001 porque el backend local tiene el nuevo endpoint
+        const response = await fetch(`http://localhost:3001/api/${endpoint}?${queryParams.toString()}`);
         if (response.ok) {
           const result = await response.json();
           setData(result.data || []);
@@ -269,7 +275,7 @@ export default function Home() {
     };
 
     fetchData();
-  }, [debouncedSearch, grupo, page, limit]);
+  }, [debouncedSearch, grupo, page, limit, activeTab]);
 
   const handleRowClick = (item: Alimento) => {
     setSelectedItem(item);
@@ -322,6 +328,22 @@ export default function Home() {
               <strong>SMAE-NutriROMI</strong> es una herramienta integral diseñada para facilitar el control riguroso de aportes nutrimentales. Utilizando como núcleo central la extensa base de datos clínica de la plataforma <strong>SMAE (Sistema Mexicano de Alimentos Equivalentes)</strong>, este sistema permite realizar cálculos precisos de macronutrientes, vitaminas y minerales en tiempo real. Destaca por su gran versatilidad arquitectónica: puede ser consultada de forma totalmente independiente como un portal de apoyo para estructurar planes alimenticios, o bien, ser integrada fluidamente como un módulo analítico dentro de otros proyectos y sistemas de <strong>terceros</strong>. Nuestro objetivo es optimizar la evaluación dietética mediante una interfaz moderna, escalable y altamente confiable.
             </p>
           </div>
+        </div>
+
+        {/* Tabs de Navegación Principales */}
+        <div className="flex gap-4 mb-8 border-b border-slate-200">
+          <button 
+            onClick={() => { setActiveTab('alimentos'); setPage(1); setSearch(''); setGrupo(''); }}
+            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'alimentos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Alimentos Equivalentes
+          </button>
+          <button 
+            onClick={() => { setActiveTab('platillos'); setPage(1); setSearch(''); setGrupo(''); }}
+            className={`pb-3 px-4 font-bold text-sm transition-colors border-b-2 ${activeTab === 'platillos' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            Platillos (Recetas)
+          </button>
         </div>
 
         {/* Sección de la Calculadora (Independiente) */}
@@ -615,30 +637,32 @@ export default function Home() {
                     </td>
                   </tr>
                 ) : (
-                  data.map((item, idx) => (
+                  data.map((item, idx) => {
+                    const isPlatillo = activeTab === 'platillos';
+                    return (
                     <tr 
                       key={idx} 
                       onClick={() => handleRowClick(item)}
                       className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">{item.Alimento}</div>
-                        <div className="text-xs text-slate-500 mt-1">{item.Grupo}</div>
+                        <div className="text-sm font-medium text-slate-900">{isPlatillo ? item.Platillo : item.Alimento}</div>
+                        <div className="text-xs text-slate-500 mt-1">{isPlatillo ? item.Clasificacion_Busqueda : item.Grupo}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                        {item['Cant.']} {item.Unidad}
+                        {isPlatillo ? '1 porción' : `${item['Cant.']} ${item.Unidad}`}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium hidden md:table-cell">
-                        {item['Energía (kcal)']} kcal
+                        {isPlatillo ? item.Energia_kcal : item['Energía (kcal)']} kcal
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium hidden lg:table-cell">
-                        {item['Proteína (g)']} g
+                        {isPlatillo ? item.Proteina_g : item['Proteína (g)']} g
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium hidden lg:table-cell">
-                        {item['Lípidos (g)']} g
+                        {isPlatillo ? item.Lipidos_g : item['Lípidos (g)']} g
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium hidden xl:table-cell">
-                        {item['Hidratos de carbono (g)']} g
+                        {isPlatillo ? item.H_de_C_g : item['Hidratos de carbono (g)']} g
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end items-center text-blue-600 group-hover:text-blue-800 transition-colors cursor-pointer">
@@ -647,7 +671,7 @@ export default function Home() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
