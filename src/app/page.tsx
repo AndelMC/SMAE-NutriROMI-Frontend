@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Activity, Stethoscope, ChevronRight, Loader2, ChevronDown, Check, Leaf, Apple, Wheat, Bean, Beef, Milk, Droplet, Candy, Coffee, Wine, ListFilter, Calculator, Plus, Minus, Trash2, ShoppingCart, X, Beaker, Pill, Code, Info } from 'lucide-react';
+import { Search, Activity, Stethoscope, ChevronRight, Loader2, ChevronDown, Check, Leaf, Apple, Wheat, Bean, Beef, Milk, Droplet, Candy, Coffee, Wine, ListFilter, Calculator, Plus, Minus, Trash2, ShoppingCart, X, Beaker, Pill, Code, Info, GlassWater, CupSoda, Salad, UtensilsCrossed, CakeSlice, Sandwich, Soup, Utensils } from 'lucide-react';
 import Image from 'next/image';
 import SideDrawer from '@/components/SideDrawer';
 import logo from './logo.png';
@@ -32,6 +32,7 @@ const GRUPOS_SMAE = [
   { value: "Cereales y tubérculos", label: "Cereales y tubérculos", icon: Wheat },
   { value: "Leguminosas", label: "Leguminosas", icon: Bean },
   { value: "Alimentos de Origen Animal", label: "Alimentos de Origen Animal", icon: Beef },
+  { value: "Carne", label: "Carne", icon: Beef },
   { value: "Leche", label: "Leche", icon: Milk },
   { value: "Aceites y grasas", label: "Aceites y grasas", icon: Droplet },
   { value: "Azúcares", label: "Azúcares", icon: Candy },
@@ -39,12 +40,25 @@ const GRUPOS_SMAE = [
   { value: "Bebidas alcohólicas", label: "Bebidas alcohólicas", icon: Wine }
 ];
 
+const CLASIFICACIONES_PLATILLOS = [
+  { value: "Agua de Sabor", label: "Agua de Sabor", icon: GlassWater },
+  { value: "Atole", label: "Atole", icon: Coffee },
+  { value: "Bebida", label: "Bebida", icon: CupSoda },
+  { value: "Fruta", label: "Fruta", icon: Apple },
+  { value: "Guarnición", label: "Guarnición", icon: Salad },
+  { value: "Plato Fuerte", label: "Plato Fuerte", icon: UtensilsCrossed },
+  { value: "Postre", label: "Postre", icon: CakeSlice },
+  { value: "Refrigerios Escolares", label: "Refrigerios Escolares", icon: Sandwich },
+  { value: "Sopa", label: "Sopa", icon: Soup }
+];
+
 // Componente Custom Select para soportar iconos SVG
-function CustomGroupSelect({ value, onChange }: { value: string, onChange: (val: string) => void }) {
+function CustomGroupSelect({ value, onChange, activeTab = 'alimentos' }: { value: string, onChange: (val: string) => void, activeTab?: 'alimentos' | 'platillos' }) {
   const [isOpen, setIsOpen] = useState(false);
   
-  const selectedOption = GRUPOS_SMAE.find(g => g.value === value);
-  const SelectedIcon = selectedOption ? selectedOption.icon : ListFilter;
+  const options = activeTab === 'platillos' ? CLASIFICACIONES_PLATILLOS : GRUPOS_SMAE;
+  const selectedOption = options.find(g => g.value === value);
+  const SelectedIcon = selectedOption ? selectedOption.icon : (activeTab === 'platillos' ? Utensils : ListFilter);
 
   return (
     <div className="relative w-full sm:w-64">
@@ -55,7 +69,7 @@ function CustomGroupSelect({ value, onChange }: { value: string, onChange: (val:
       >
         <div className="flex items-center gap-2 truncate">
           <SelectedIcon className="h-4 w-4 text-slate-500 flex-shrink-0" />
-          <span className="truncate">{selectedOption ? selectedOption.label : "Todos los grupos"}</span>
+          <span className="truncate">{selectedOption ? selectedOption.label : (activeTab === 'platillos' ? "Todas las clasificaciones" : "Todos los grupos")}</span>
         </div>
         <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0 ml-2" />
       </button>
@@ -69,10 +83,10 @@ function CustomGroupSelect({ value, onChange }: { value: string, onChange: (val:
               className={`flex items-center w-full px-3 py-2.5 hover:bg-slate-50 transition-colors ${value === "" ? "bg-blue-50/50 text-blue-700 font-medium" : "text-slate-700"}`}
             >
               <ListFilter className={`h-4 w-4 mr-2 ${value === "" ? "text-blue-600" : "text-slate-400"}`} />
-              <span className="flex-1 text-left">Todos los grupos</span>
+              <span className="flex-1 text-left">{activeTab === 'platillos' ? "Todas las clasificaciones" : "Todos los grupos"}</span>
               {value === "" && <Check className="h-4 w-4 text-blue-600" />}
             </button>
-            {GRUPOS_SMAE.map((g) => {
+            {options.map((g) => {
               const Icon = g.icon;
               const isSelected = value === g.value;
               return (
@@ -662,13 +676,9 @@ export default function Home() {
             <label htmlFor="grupo" className="text-sm font-medium text-slate-600 whitespace-nowrap">
               Filtrar por Grupo:
             </label>
-            <CustomGroupSelect 
-              value={grupo}
-              onChange={(val) => {
-                setGrupo(val);
-                setPage(1);
-              }}
-            />
+            <div className="w-full sm:w-auto">
+              <CustomGroupSelect value={grupo} onChange={(val) => { setGrupo(val); setPage(1); }} activeTab={activeTab} />
+            </div>
           </div>
         </div>
 
